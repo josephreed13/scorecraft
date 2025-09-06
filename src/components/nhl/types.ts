@@ -1,3 +1,5 @@
+export type DefaultString = { default?: string };
+
 export type Team = {
   id: number;
   franchiseId: number;
@@ -7,6 +9,15 @@ export type Team = {
   triCode: string;
 };
 
+export type ClubScheduleGameTeam = {
+  abbrev?: string;
+  id?: number;
+  score?: number;
+  logo?: string;
+  placeName?: DefaultString;
+  commonName?: DefaultString;
+};
+
 export type ClubScheduleGame = {
   id?: number;
   season?: number;
@@ -14,26 +25,36 @@ export type ClubScheduleGame = {
   gameDate?: string;
   startTimeUTC?: string;
   gameState?: string;
-  venue?: { default?: string };
-  homeTeam?: {
-    abbrev?: string;
-    id?: number;
-    score?: number;
-    logo?: string;
-    placeName?: { default?: string };
-    commonName?: { default?: string };
-  };
-  awayTeam?: {
-    abbrev?: string;
-    id?: number;
-    score?: number;
-    logo?: string;
-    placeName?: { default?: string };
-    commonName?: { default?: string };
-  };
+  venue?: DefaultString;
+  homeTeam?: ClubScheduleGameTeam;
+  awayTeam?: ClubScheduleGameTeam;
   gameCenterLink?: string;
   threeMinRecapFr?: string;
   condensedGameFr?: string;
 };
 
-export type ClubScheduleResponse = { games?: ClubScheduleGame[] };
+export type RosterPlayer = {
+  id?: number;
+  headshot?: string;
+  firstName?: DefaultString;
+  lastName?: DefaultString;
+  sweaterNumber?: number;
+  positionCode?: string;
+  shootsCatches?: string;
+  heightInInches?: number;
+  weightInPounds?: number;
+  heightInCentimeters?: number;
+  weightInKilograms?: number;
+  birthDate?: string;
+  birthCity?: DefaultString;
+  birthCountry?: string;
+};
+
+export type ClubRosterResponse = {
+  // api-web format (most common)
+  forwards?: RosterPlayer[];
+  defensemen?: RosterPlayer[];
+  goalies?: RosterPlayer[];
+  // fallback for other shapes
+  roster?: RosterPlayer[];
+};

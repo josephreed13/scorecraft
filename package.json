@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "type-check": "tsc -p tsconfig.json --noEmit",
+    "type-check:watch": "tsc -p tsconfig.json --noEmit --watch"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.9",

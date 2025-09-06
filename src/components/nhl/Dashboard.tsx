@@ -5,12 +5,19 @@ import TeamPanel from "./TeamPanel";
 import ScheduleList from "./ScheduleList";
 import SelectedGameCard from "./SelectedGameCard";
 import SelectedGameJson from "./SelectedGameJson";
-import { ClubScheduleGame, Team } from "./types";
+import RosterList from "./RosterList";
+import SelectedPlayerCard from "./SelectedPlayerCard";
+import {
+  ClubRosterResponse,
+  ClubScheduleGame,
+  RosterPlayer,
+  Team,
+} from "./types";
 import { isRouteError } from "@/types/api";
 
 const SEASON_ID = "20242025";
 
-export default function TeamsSchedulePanel() {
+export default function Dashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsErr, setTeamsErr] = useState<string | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
@@ -19,7 +26,13 @@ export default function TeamsSchedulePanel() {
   const [schedErr, setSchedErr] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
-  // Load teams
+  const [roster, setRoster] = useState<ClubRosterResponse | null>(null);
+  const [rosterErr, setRosterErr] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(
+    null
+  );
+
+  // Load teams (sorted; default to ANA)
   useEffect(() => {
     (async () => {
       try {
@@ -52,13 +65,14 @@ export default function TeamsSchedulePanel() {
     })();
   }, []);
 
-  // Load schedule when team changes
+  // When team changes, fetch schedule + roster
   useEffect(() => {
     if (!team?.triCode) return;
+
+    // schedule
     setSchedule(null);
     setSchedErr(null);
     setSelectedIdx(null);
-
     (async () => {
       try {
         const res = await fetch(
@@ -92,6 +106,43 @@ export default function TeamsSchedulePanel() {
         );
       }
     })();
+
+    // roster
+    setRoster(null);
+    setRosterErr(null);
+    setSelectedPlayer(null);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/nhl/roster?team=${team.triCode}&season=${SEASON_ID}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body: unknown = await res.json();
+
+        if (isRouteError(body)) {
+          setRoster(null);
+          setRosterErr(body.message ?? body.error);
+          return;
+        }
+
+        const r = body as ClubRosterResponse;
+        setRoster(r);
+
+        // pick a sensible default player
+        const first =
+          r.forwards?.[0] ??
+          r.defensemen?.[0] ??
+          r.goalies?.[0] ??
+          r.roster?.[0] ??
+          null;
+        setSelectedPlayer(first ?? null);
+      } catch (err: unknown) {
+        setRosterErr(
+          err instanceof Error ? err.message : "Failed to fetch roster"
+        );
+      }
+    })();
   }, [team?.triCode]);
 
   const selectedGame =
@@ -104,10 +155,9 @@ export default function TeamsSchedulePanel() {
         teams={teams}
         team={team}
         teamsErr={teamsErr}
-        onChange={(tri) => {
-          const next = teams.find((t) => t.triCode === tri) || null;
-          setTeam(next);
-        }}
+        onChange={(tri) =>
+          setTeam(teams.find((t) => t.triCode === tri) || null)
+        }
       />
 
       {/* Row 2 — Schedule | Selected Game */}
@@ -123,7 +173,20 @@ export default function TeamsSchedulePanel() {
         <SelectedGameCard team={team} game={selectedGame} />
       </div>
 
-      {/* Row 3 — Raw JSON */}
+      {/* Row 3 — Roster | Selected Player */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <RosterList
+          team={team}
+          seasonId={SEASON_ID}
+          roster={roster}
+          rosterErr={rosterErr}
+          selectedPlayer={selectedPlayer}
+          onSelect={(p) => setSelectedPlayer(p)}
+        />
+        <SelectedPlayerCard team={team} player={selectedPlayer} />
+      </div>
+
+      {/* Row 4 — Raw JSON for selected game */}
       <SelectedGameJson game={selectedGame} />
     </div>
   );
